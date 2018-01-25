@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+</html>{% block content %}
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/datatables/1.9.4/jquery.dataTables.min.js"></script>
+	<script type="text/javascript" src="https://cdn.datatables.net/v/bs/dt-1.10.16/datatables.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+	<link rel="stylesheet" href="https://cdn.datatables.net/select/1.2.4/css/select.dataTables.min.css">
+	<script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+	<script src="https://cdn.datatables.net/select/1.2.4/js/dataTables.select.min.js"></script>
+	<script src="https://cdn.datatables.net/plug-ins/1.10.16/dataRender/ellipsis.js"></script>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-12">
+
+			<nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="/">Network iTC Tracker</a>
+                    </div>
+                    <ul class="nav navbar-nav">
+                        <li class="dropdown">
+							 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Issues<strong class="caret"></strong></a>
+							<ul class="dropdown-menu">
+								<li>
+									<a href="allissues">All Issues</a>
+								</li>
+								<li>
+									<a href="openissues">Open Issues</a>
+								</li>
+								<li>
+									<a href="resissues">Resolved Issues</a>
+								</li>
+								<li class="divider">
+								</li>
+								<li>
+									<a href="myissues">My Issues</a>
+								</li>
+								<li>
+									<a href="#">One more separated link</a>
+								</li>
+							</ul>
+						</li>
+
+                        <li><a href="newissue">New Issue</a></li>
+                        <li><a href="roadmap">Roadmap</a></li>
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="/logout"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+	</div>
+
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8">
+            <h4>All Resolved Issues</h4>
+            <table class="datatable table table-hover table-condensed">
+                <thead>
+			        <tr>
+                        <th>Issue ID</th>
+                        <th>Title</th>
+                        <th>Raised By</th>
+                        <th>Date Added</th>
+                        <th>Severity</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in issues %}
+                    <tr>
+                        <td>
+                            <a href="viewissue?id={{ entry['id'] }}">{{ entry['id'] }}</a>
+                        </td>
+                        <td>{{ entry['title'] }}</td>
+                        <td>{{ entry['raised_by'] }}</td>
+                        <td>{{ entry['date'] }}</td>
+                        <td>{{ entry['severity'] }}</td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+
+<script type="text/javascript">
+
+		$(document).ready(function() {
+			$('.datatable').dataTable({
+				"sPaginationType": "full",
+				columnDefs: [ {
+					// orderable: false,
+					// className: 'select-checkbox',
+					targets: 0,
+					render: $.fn.dataTable.render.ellipsis( 35 )
+				} ],
+				//select: {
+				//	style:	'os',
+				//	selector: 'td:first-child'
+				//}
+
+			});
+			$('.datatable').each(function(){
+				var datatable = $(this);
+				// SEARCH - Add the placeholder for Search and Turn this into in-line form control
+				var search_input = datatable.closest('.dataTables_wrapper').find('div[id$=_filter] input');
+				search_input.attr('placeholder', 'Search');
+				search_input.addClass('form-control input-sm');
+				// LENGTH - Inline-Form control
+				var length_sel = datatable.closest('.dataTables_wrapper').find('div[id$=_length] select');
+				length_sel.addClass('form-control input-sm');
+			});
+
+		});
+</script>
+
+{% endblock %}

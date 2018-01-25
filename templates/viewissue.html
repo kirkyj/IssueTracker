@@ -1,0 +1,126 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+Issue Tracker
+{% endblock %}
+
+{% block content %}
+
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+</head>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-12">
+
+			<nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="/">Network iTC Tracker</a>
+                    </div>
+                    <ul class="nav navbar-nav">
+                        <li class="dropdown">
+							 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Issues<strong class="caret"></strong></a>
+							<ul class="dropdown-menu">
+								<li>
+									<a href="allissues">All Issues</a>
+								</li>
+								<li>
+									<a href="openissues">Open Issues</a>
+								</li>
+								<li>
+									<a href="resissues">Resolved Issues</a>
+								</li>
+								<li class="divider">
+								</li>
+								<li>
+									<a href="myissues">My Issues</a>
+								</li>
+								<li>
+									<a href="#">One more separated link</a>
+								</li>
+							</ul>
+						</li>
+                        <li><a href="newissue">New Issue</a></li>
+                        <li><a href="roadmap">Roadmap</a></li>
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="/logout"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+	</div>
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8">
+            <h4>View Issue - {{ id }}</h4>
+            <form method="POST" action="/newissue">
+                <!-- {{ wtf.quick_form(form, button_map={"submit":"primary"}) }} -->
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8">
+            <form method="POST" action="/updateissue?id={{ id }}">
+
+                <div class="form-group">{{ form.title.label }} {{ form.title(class="edit-class form-control", disabled=true) }}</div>
+                <div class="form-group">{{ form.desc.label }} {{ form.desc(class="edit-class form-control", disabled=true) }}</div>
+                <div class="form-group">{{ form.sev.label }} {{ form.sev(class="edit-class form-control", disabled=true) }}</div>
+                <div class="form-group">{{ form.impact_doc.label }} {{ form.impact_doc(class="edit-class form-control", disabled=true) }}</div>
+                <div class="form-group">{{ form.state.label }} {{ form.state(class="edit-class form-control", disabled=true) }}</div>
+                <div class="form-group">{{ form.impact_ver.label }} {{ form.impact_ver(class="edit-class form-control", disabled=true) }}</div>
+                <div class="form-group">{{ form.area.label }} {{ form.area(class="edit-class form-control", disabled=true) }}</div>
+                <div class="form-group">{{ form.prop_res.label }} {{ form.prop_res(class="edit-class form-control", disabled=true) }}</div>
+                <!-- The below comment box is for new comments only. Need to add in additional for-loop for rendering existing comments -->
+                <div id="comment" class="form-group hidden">{{ form.comment.label }} {{ form.comment(class="form-control") }}</div>
+                <div class="form-group"><button id="update" type="submit" class="btn btn-primary hidden" name="update">Update</button><div class="form-group pull-right">
+                <button id="edit" type="button" class="btn btn-success" name="edit">Edit</button>
+                <button id="cancel" type="button" class="btn btn-danger hidden" name="cancel">Cancel</button>
+                <button id="commentbtn" type="button" class="btn btn-primary" name="comment">Add Comment</button>
+            </div></div>
+            </form>
+
+
+    </div>
+</div>
+
+    <script>
+        $(document).ready(function()
+        {
+            $("#edit").click(function()
+                {
+                    $(".edit-class").prop("disabled", false);
+                    $("#update").removeClass("hidden");
+                    $("#cancel").removeClass("hidden");
+                });
+
+            $("#cancel").click(function()
+                {
+                    $(".edit-class").prop("disabled", true);
+                    $("#comment").addClass("hidden");
+                    $("#update").addClass("hidden");
+                    $("#cancel").addClass("hidden");
+                });
+            $("#commentbtn").click(function()
+                {
+                     $("#comment").removeClass("hidden");
+                     $("#cancel").removeClass("hidden");
+                     $("#update").removeClass("hidden");
+                });
+        });
+
+    </script>
+
+{% endblock %}
