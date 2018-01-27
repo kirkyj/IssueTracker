@@ -33,6 +33,7 @@ class User(db.Document):
     password = db.StringField(max_length=255)
     firstname = db.StringField(max_length=255)
     lastname = db.StringField(max_length=255)
+    active = db.BooleanField()
     org = db.StringField(max_length=255)
     reg_date = db.DateTimeField()
 
@@ -40,7 +41,7 @@ class User(db.Document):
         return True
 
     def is_active(self):
-        return True
+        return self.active
 
     def is_anonymous(self):
         return False
@@ -99,7 +100,9 @@ def login():
     elif request.method == 'POST':
         for user in User.objects:
             if user.email == form.email.data:
-                if pbkdf2_sha256.verify(form.password.data, user.password):
+                if user.is_active() == False:
+                    return "User not activated"
+                elif pbkdf2_sha256.verify(form.password.data, user.password):
                     # Password must be correct
                     login_user(user)
                     session['user'] = current_user.firstname+' '+current_user.lastname
@@ -122,7 +125,7 @@ def signup():
                 if user.email == form.email.data:
                     return "Email address already exists"
             User(email=form.email.data, password=pbkdf2_sha256.hash(form.password.data), firstname=form.first.data, \
-                 lastname=form.last.data, org=form.org.data, reg_date=datetime.datetime.now()).save()
+                 lastname=form.last.data, org=form.org.data, reg_date=datetime.datetime.now(), active=False).save()
             return render_template("login.html", form=login_form)
         else:
             return "Form didn't validate"
@@ -179,6 +182,7 @@ def new_issue():
         issue['date'] = datetime.datetime.utcnow()
         issue['state'] = 'open'
         issue['prop_resolution'] = form.prop_res.data
+        issue['comments'] = []
 
         issue_db.insert_one(issue)
         return render_template("issueadded.html")
@@ -227,7 +231,7 @@ def res_issues():
     for document in db.find():
         if document['state'] == 'resolved':
             #firstseen = datetime.datetime.strptime(document['date'], "%Y-%m-%dT%H:%M:%S.%fZ")
-            document['date'] = document['date'].strftime("%A, %d. %B %Y %I:%M%p")
+            document['date'] = document['date'].strftime("%a, %d. %b %Y %I:%M%p")
             result.append(document)
 
     return  render_template("resissues.html", issues=result)
@@ -270,16 +274,21 @@ def view_issue():
     form.title.data = document['title']
     form.desc.data = document['description']
     form.sev.data = document['severity']
+    form.raised_by.data = document['raised_by']
     form.impact_doc.data = document['impact_doc']
     form.state.data = document['state']
     form.impact_ver.data = document['impact_ver']
     form.area.data = document['impact_area']
     form.prop_res.data = document['prop_resolution']
 
+    comments = document['comments']
+    for comment in comments:
+        comment['date'] = comment['date'].strftime("%a, %d. %b %Y %I:%M%p")
+
     # Now we have a handle to the issue we're interested in
     # just need to pass this back via the render engine
 
-    return render_template("viewissue.html", issue=document, form = form, id = issue_id)
+    return render_template("viewissue.html", issue=document, form = form, id = issue_id, comments = comments)
 
 @app.route("/updateissue", methods=['GET','POST'])
 @login_required
@@ -288,8 +297,38 @@ def update():
     form = EditIssueForm()
     issue_id = request.args.get("id")
     db = db_connect('issues')
+    new_comment = {}
 
     document = db.find_one({"id": int(issue_id)})
+    db.delete_one({'_id': document['_id']})
+    document.pop('_id')
+
+    document['title'] = form.title.data
+    document['description'] = form.desc.data
+    document['severity'] = form.sev.data
+    document['impact_doc'] = form.impact_doc.data
+    document['impact_area'] = form.area.data
+    document['state'] = form.state.data
+    document['impact_ver'] = form.impact_ver.data
+    document['prop_resolution'] = form.prop_res.data
+
+    document['last_update'] = datetime.datetime.utcnow()
+    document['last_update_by'] = current_user.get_id()
+
+    comments = document['comments']
+
+    #print (comments)
+
+    if form.comment.data != '':
+        new_comment['comment'] = form.comment.data
+        new_comment['user_id'] = current_user.get_id()
+        new_comment['date'] = datetime.datetime.utcnow()
+        comments.append(new_comment)
+
+    print(document)
+    document['comments'] = comments
+    print (document)
+    db.insert_one(document)
 
     #db.update_one({'_id': document['_id']},
      #             {"$set": {"title": form.title.data, "desc": form.desc.data, "sev": form.sev.data,
@@ -300,7 +339,7 @@ def update():
     # Remove the old document from the DB
     # Copy all of the mutable data from the form in to an updated document.
     # Keep the id, date and raised_by the same (these can't be updated by the form so shouldn't be a problem
-    # ToDo need to check it status changes to resolved and if so, tag the ID of the user that changed the state
+    # ToDo need to check it status changed to resolved and if so, tag the ID of the user that changed the state
     # ToDo need to check the state and if resolved, don't allow editing of the issue, except adding comments
 
     #if form.comment.data != '':

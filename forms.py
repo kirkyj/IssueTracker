@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField
+from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField, BooleanField
 from wtforms.validators import Email, DataRequired, EqualTo
 
 
@@ -22,6 +22,7 @@ class NewIssueForm(FlaskForm):
     desc = TextAreaField('Description', validators=[DataRequired()])
     sev = SelectField('Severity', choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')])
     impact_doc = SelectField('Document Impacted', choices=[('networkcpp', 'Network cPP'),('networksd', 'Network SD'), ('firewallcpp', 'Firewall cPP'), ('firewallsd', 'Firewall SD')])
+    #impact_doc = BooleanField('Document Impacted', choices=[('networkcpp', 'Network cPP'),('networksd', 'Network SD'), ('firewallcpp', 'Firewall cPP'), ('firewallsd', 'Firewall SD')])
     #impact_doctype = SelectField('', choices=[('cpp', 'cPP'), ('sd', 'SD')])
     impact_ver = SelectField('Impacted Version', validators=[DataRequired()])
     area = StringField('Paragraph, Section or Page', validators=[DataRequired()])
@@ -37,6 +38,7 @@ class EditIssueForm(FlaskForm):
                                                            ('firewallcpp', 'Firewall cPP'),
                                                            ('firewallsd', 'Firewall SD')])
     state = SelectField('State', choices=[('open','Open'), ('resolved','Resolved')])
+    raised_by = StringField('Submitted by')
     impact_ver = SelectField('Impacted Version', choices = [('1.0','v1.0'),('2.0','v2.0'),('2.1','v2.1')], validators=[DataRequired()])
     area = StringField('Paragraph, Section or Page', validators=[DataRequired()])
     prop_res = TextAreaField('Proposed Resolution', validators=[DataRequired()])

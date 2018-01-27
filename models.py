@@ -7,6 +7,7 @@ class User(db.Document):
     email = db.StringField(max_length=255)
     password = db.StringField(max_length=255)
     firstname = db.StringField(max_length=255)
+    active = db.BooleanField()
     lastname = db.StringField(max_length=255)
     org = db.StringField(max_length=255)
     reg_date = db.DateTimeField()
@@ -15,7 +16,7 @@ class User(db.Document):
         return True
 
     def is_active(self):
-        return True
+        return self.active
 
     def is_anonymous(self):
         return False
