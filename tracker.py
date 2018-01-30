@@ -7,6 +7,7 @@ from flask_bootstrap import Bootstrap
 from passlib.hash import pbkdf2_sha256
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 import datetime
+from mailer import activate_mail
 #from models import db
 #from models import User, DocKind, DocVersion, Versions
 
@@ -126,6 +127,7 @@ def signup():
                     return "Email address already exists"
             User(email=form.email.data, password=pbkdf2_sha256.hash(form.password.data), firstname=form.first.data, \
                  lastname=form.last.data, org=form.org.data, reg_date=datetime.datetime.now(), active=False).save()
+            activate_mail(form.email.data)
             return render_template("login.html", form=login_form)
         else:
             return "Form didn't validate"
