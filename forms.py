@@ -40,6 +40,10 @@ class EditIssueForm(FlaskForm):
     state = SelectField('State', choices=[('open','Open'), ('resolved','Resolved')])
     raised_by = StringField('Submitted by')
     impact_ver = SelectField('Impacted Version', choices = [('1.0','v1.0'),('2.0','v2.0'),('2.1','v2.1')], validators=[DataRequired()])
+    # ToDo do I also need an additional field to identify who resolved the issue as well as how it was resolved (accepted etc.)
+    # ToDo may also need an 'owner' field to identify who is handling the issue. As well as a resolution field
+    res_state = SelectField('Resolution', choices=[('accept', 'Accept'), ('accept_w_mods', 'Accept with Modification'), ('no_change', 'No Change'), ('roadmap','Roadmap')])
+    resolution = TextAreaField('Resolution', validators=[DataRequired()])
     area = StringField('Paragraph, Section or Page', validators=[DataRequired()])
     prop_res = TextAreaField('Proposed Resolution', validators=[DataRequired()])
     comment = TextAreaField('Comment')

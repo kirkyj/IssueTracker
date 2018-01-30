@@ -7,7 +7,7 @@ Issue Tracker
 
 {% block content %}
 
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -136,6 +136,16 @@ Issue Tracker
             </div>
         </div>
 
+        <div class="row hidden" id="resolution">
+            <div class="col-md-1"></div>
+            <div class="form-group col-md-2">
+                {{ form.res_state.label }} {{ form.res_state(class="form-control res-state") }}
+            </div>
+            <div class="form-group col-md-8">
+                {{ form.resolution.label }} {{ form.resolution(class="form-control") }}
+            </div>
+        </div>
+
 
 
         {% if comments|length > 0 %}
@@ -221,6 +231,19 @@ Issue Tracker
                      $("#commentbtn").addClass("hidden");
                      $("#edit").addClass("hidden");
                 });
+            // If status of 'state' is 'resolved' then make some form elements unhidden
+            // need to check syntax for id attribute i.e. is it a # or $?
+            $("#state").change(function()
+            {
+                if ($(this).val() == "resolved")
+                {
+                    $("#resolution").removeClass("hidden");
+                }
+                else
+                {
+                    $("#resolution").addClass("hidden");
+                }
+            });
         });
 
     </script>
