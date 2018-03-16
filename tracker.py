@@ -1,21 +1,22 @@
+from flask import Flask, render_template, request, session, Response, current_app, flash, url_for
 from pymongo import MongoClient
-from flask import Flask, render_template, request, session
 from flask_mongoengine import MongoEngine
-import datetime
-from forms import LoginForm, SignupForm, NewIssueForm, EditIssueForm
+from flask_security import MongoEngineUserDatastore, Security, url_for_security, user_registered, UserMixin, RoleMixin, login_required, current_user
+from forms import SignupForm, NewIssueForm, EditIssueForm
 from flask_bootstrap import Bootstrap
-from passlib.hash import pbkdf2_sha256
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 import datetime
-from mailer import activate_mail
-#from models import db
-#from models import User, DocKind, DocVersion, Versions
+from flask_principal import RoleNeed, Permission
+import io
+import csv
+from flask_mail import Mail
 
-# DB Connector routine
+
+# Flask Setup
 
 app = Flask(__name__)
-app.config['DEBUG'] = True
-app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+app.config.from_pyfile('config.py')
+
+# MongoEngine Setup
 
 db = MongoEngine(app)
 
@@ -23,66 +24,54 @@ db = MongoEngine(app)
 
 Bootstrap(app)
 
-app.config['MONGODB_SETTINGS'] = {
-    'db': 'tracker',
-    'host': 'localhost',
-    'port': 27017
-}
+# Flask-Mail Setup
 
-class User(db.Document):
-    email = db.StringField(max_length=255)
-    password = db.StringField(max_length=255)
+mail = Mail(app)
+
+# User Class for Flask-Security
+
+class Role(db.Document, RoleMixin):
+    name = db.StringField(max_length=80, unique=True)
+    description = db.StringField(max_length=255)
+
+class User(db.Document, UserMixin):
+
     firstname = db.StringField(max_length=255)
     lastname = db.StringField(max_length=255)
-    active = db.BooleanField()
+    email = db.StringField(max_length=255)
+    password = db.StringField(max_length=255)
     org = db.StringField(max_length=255)
-    reg_date = db.DateTimeField()
+    confirmed_at = db.DateTimeField()
+    roles = db.ListField(db.ReferenceField(Role), default=[])
+    active = db.BooleanField(default=True)
 
-    def is_authenticated(self):
-        return True
+    def list_roles(self):
+        entry = []
+        for r in self.roles:
+            entry.append(r.name)
+        return entry
 
-    def is_active(self):
-        return self.active
+    #def get_id(self):
+    #    return str(self.email)
 
-    def is_anonymous(self):
-        return False
+    #Could Add some addition functions here to deal with listing the user roles etc.
 
-    def get_id(self):
-        return str(self.email)
+# Flask-Security Setup and Configuration
 
-class DocVersion(db.EmbeddedDocument):
-    version = db.StringField(max_length=20)
-    rel_kind = db.StringField(max_length=20)
-    state = db.StringField(max_length=20)
-    released = db.DateTimeField()
+user_datastore = MongoEngineUserDatastore(db, User, Role)
+security = Security(app, user_datastore, confirm_register_form=SignupForm)
 
-class DocKind(db.EmbeddedDocument):
-    kind = db.StringField(max_length=20)
-    versions = db.EmbeddedDocumentListField(DocVersion)
+# Flask_Principal Role Setup
 
-class Versions(db.Document):
-    name = db.StringField(max_length=20)
-    type = db.EmbeddedDocumentListField(DocKind)
+admin_role = user_datastore.find_or_create_role('admin')
+editor_role = user_datastore.find_or_create_role('editor')
+member_role = user_datastore.find_or_create_role('member')
 
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "login"
+admin_permission = Permission(RoleNeed('admin'))
+editor_permission = Permission(RoleNeed('editor'))
+member_permission = Permission(RoleNeed('member'))
 
-#version1 = DocVersion(version = "1.0", rel_kind = "major", state = "active", released = datetime.datetime.now())
-#version2 = DocVersion(version = "2.0", rel_kind = "major", state = "active", released = datetime.datetime.now())
-#version21 = DocVersion(version = "2.1", rel_kind = "minor", state = "draft", released = datetime.datetime.now())
-#version22 = DocVersion(version = "2.2", rel_kind = "minor", state = "draft", released = datetime.datetime.now())
-
-#cpp_kind = DocKind(kind = "cPP", versions = [version1, version2, version21, version22])
-#sd_kind = DocKind(kind = "SD", versions = [version1, version2, version21])
-
-#fw_doc = Versions(name = "Firewall", type = [cpp_kind, sd_kind]).save()
-
-@login_manager.user_loader
-def load_user(email):
-    for user in User.objects:
-        if user.email == email:
-            return user
+# MongoDB Connection Function
 
 def db_connect(collection):
 
@@ -92,103 +81,31 @@ def db_connect(collection):
 
     return db_collection
 
-@app.route("/login", methods=['GET', 'POST'])
-def login():
+# Flask Routing Defintions
 
-    form = LoginForm()
-    if request.method == 'GET':
-        return render_template('login.html', form=form)
-    elif request.method == 'POST':
-        for user in User.objects:
-            if user.email == form.email.data:
-                if user.is_active() == False:
-                    return "User not activated"
-                elif pbkdf2_sha256.verify(form.password.data, user.password):
-                    # Password must be correct
-                    login_user(user)
-                    session['user'] = current_user.firstname+' '+current_user.lastname
-                    print (session['user'])
-                    return render_template("home.html")
-                else:
-                    return "Incorrect username or password"
-        # If we get here, we didn't find the user email in the DB so fail login
-        return "Incorrect username or password"
+@app.context_processor
+def login_context():
+    return {
+        'url_for_security': url_for_security
+    }
 
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    form = SignupForm()
-    login_form = LoginForm()
-    if request.method == 'GET':
-        return render_template('signup.html', form = form)
-    elif request.method == 'POST':
-        if form.validate_on_submit():
-            for user in User.objects:
-                if user.email == form.email.data:
-                    return "Email address already exists"
-            User(email=form.email.data, password=pbkdf2_sha256.hash(form.password.data), firstname=form.first.data, \
-                 lastname=form.last.data, org=form.org.data, reg_date=datetime.datetime.now(), active=False).save()
-            activate_mail(form.email.data)
-            return render_template("login.html", form=login_form)
-        else:
-            return "Form didn't validate"
+# Connect to the user_registered signal to add in
+# some additional aspects to the user account during registration
+
+@user_registered.connect_via(app)
+def user_reg(sender, user, confirm_token):
+    # Automatically add the member role to all users during registration
+    user_datastore.add_role_to_user(user, member_role)
+    # Should also de-activate all users until manual activation?
+
 
 @app.route("/")
 @login_required
 def show_home():
 
-    # Main App routine which displays the main home page
-    # Use datatables to display the currently open issues
+    # ToDo Better home page with some summary information included.
 
    return render_template('home.html')
-
-@app.route("/myissues")
-@login_required
-def my_issues():
-    collection = 'issues'
-    db = db_connect(collection)
-
-    result = []
-
-    for document in db.find():
-        if document['raised_by'] == current_user.get_id():
-            result.append(document)
-
-    return render_template("myissues.html", issues=result)
-
-@app.route("/newissue", methods=['GET','POST'])
-@login_required
-def new_issue():
-
-    form = NewIssueForm()
-    issue = {}
-
-    issue_db = db_connect('issues')
-    #doc_db = db_connect('doc')
-
-    #for document in doc_db.find():
-
-    form.impact_ver.choices = [('1.0','v1.0'),('2.0','v2.0'),('2.1','v2.1')]
-    if request.method == 'GET':
-        #form.impact.choices =
-        return render_template("addissue.html", form = form)
-    elif request.method == 'POST':
-
-        issue['title'] = form.title.data
-        issue['description'] = form.desc.data
-        issue['severity'] = form.sev.data
-        issue['impact_doc'] = form.impact_doc.data
-        issue['impact_ver'] = form.impact_ver.data
-        issue['impact_area'] = form.area.data
-        issue['id'] = issue_db.count()
-        issue['raised_by'] = current_user.get_id()
-        issue['date'] = datetime.datetime.utcnow()
-        issue['state'] = 'open'
-        issue['prop_resolution'] = form.prop_res.data
-        issue['comments'] = []
-
-        issue_db.insert_one(issue)
-        return render_template("issueadded.html")
-
 
 @app.route("/openissues")
 @login_required
@@ -204,7 +121,23 @@ def open_issues():
             document['date'] = document['date'].strftime("%A, %d. %B %Y %I:%M%p")
             result.append(document)
 
-    return  render_template("openissues.html", issues=result)
+    return render_template("openissues.html", issues=result)
+
+@app.route("/myissues")
+@login_required
+def my_issues():
+
+    collection = 'issues'
+    db = db_connect(collection)
+
+    result = []
+
+    for document in db.find():
+        if document['raised_by'] == current_user.email:
+            document['date'] = document['date'].strftime("%A, %d. %B %Y %I:%M%p")
+            result.append(document)
+
+    return render_template("myissues.html", issues=result)
 
 @app.route("/allissues")
 @login_required
@@ -219,7 +152,7 @@ def all_issues():
         document['date'] = document['date'].strftime("%A, %d. %B %Y %I:%M%p")
         result.append(document)
 
-    return  render_template("allissues.html", issues=result)
+    return render_template("allissues.html", issues=result)
 
 @app.route("/resissues")
 @login_required
@@ -232,11 +165,50 @@ def res_issues():
 
     for document in db.find():
         if document['state'] == 'resolved':
-            #firstseen = datetime.datetime.strptime(document['date'], "%Y-%m-%dT%H:%M:%S.%fZ")
             document['date'] = document['date'].strftime("%a, %d. %b %Y %I:%M%p")
             result.append(document)
 
     return  render_template("resissues.html", issues=result)
+
+@app.route("/newissue", methods=['GET','POST'])
+@login_required
+def new_issue():
+
+    form = NewIssueForm()
+    issue = {}
+
+    # Todo Add in ability to tag an issue as a NIT issue with associated identifier
+
+    issue_db = db_connect('issues')
+
+    form.impact_ver.choices = [('1.0','v1.0'),('2.0','v2.0'),('2.1','v2.1')]
+
+    if request.method == 'GET':
+        return render_template("addissue.html", form = form)
+    elif request.method == 'POST':
+
+        issue['title'] = form.title.data
+        issue['description'] = form.desc.data
+        issue['severity'] = form.sev.data
+        issue['impact_doc'] = form.impact_doc.data
+        issue['impact_ver'] = form.impact_ver.data
+        issue['impact_area'] = form.area.data
+        issue['id'] = issue_db.count()
+        issue['raised_by'] = current_user.email
+        issue['allocated_to'] = ''
+        issue['date'] = datetime.datetime.utcnow()
+        issue['state'] = 'open'
+        issue['prop_resolution'] = form.prop_res.data
+        # This may not be needed, or the check in the 'viewissues route might not be needed since all issues
+        # will have an empty comments array...Check on best way to handle
+        issue['comments'] = []
+
+        issue_db.insert_one(issue)
+
+        # Todo need to find a better response template
+
+        return render_template("issueadded.html")
+
 
 @app.route("/newrelease", methods=['GET','POST'])
 @login_required
@@ -265,8 +237,29 @@ def view_issue():
 
     issue_id = request.args.get("id")
     collection = 'issues'
-
+    user_db = db_connect('user')
+    users = []
+    choices = []
     form = EditIssueForm()
+
+    #if current_user.has_role('admin') or current_user.has_role('editor'):
+    #    form.state.choices=[('open','Open'),('resolved','Resolved')]
+    #else:
+    #    form.state.choices = [('open', 'Open')]
+
+    # Populate the 'Allocated To' form element using the current list of registered users
+
+    for user in user_db.find():
+        users.append(user_datastore.get_user(user['email']))
+
+    choices.append(('',''))
+
+    for entry in users:
+        choice = (entry.email, entry.email)
+        choices.append(choice)
+        choice = ()
+
+    form.allocated_to.choices = choices
 
     db = db_connect(collection)
 
@@ -277,59 +270,99 @@ def view_issue():
     form.desc.data = document['description']
     form.sev.data = document['severity']
     form.raised_by.data = document['raised_by']
+    form.allocated_to.data = document['allocated_to']
     form.impact_doc.data = document['impact_doc']
     form.state.data = document['state']
     form.impact_ver.data = document['impact_ver']
     form.area.data = document['impact_area']
     form.prop_res.data = document['prop_resolution']
+    # Add a fixed-in drop down if the role is editor or admin
 
-    comments = document['comments']
-    for comment in comments:
-        comment['date'] = comment['date'].strftime("%a, %d. %b %Y %I:%M%p")
+    if document['state'] == 'resolved':
+        form.res_state.data = document['resolution_state']
+        form.resolution.data = document['resolution']
+        if form.res_state.data == 'accept' or form.res_state.data == 'accept_w_mods' or form.res_state.data == 'roadmap':
+            form.resolved_in.data = document['resolved_in']
+
+    try:
+        comments = document['comments']
+        for comment in comments:
+            comment['date'] = comment['date'].strftime("%a, %d. %b %Y %I:%M%p")
+        return render_template("viewissue.html", issue=document, form=form, id=issue_id, comments=comments)
+    except:
+        return render_template("viewissue.html", issue=document, form=form, id=issue_id)
 
     # Now we have a handle to the issue we're interested in
     # just need to pass this back via the render engine
 
-    return render_template("viewissue.html", issue=document, form = form, id = issue_id, comments = comments)
 
 @app.route("/updateissue", methods=['GET','POST'])
 @login_required
 def update():
 
     form = EditIssueForm()
+
+    # Grab the Issue ID from the form POST
+
     issue_id = request.args.get("id")
+
+    # Connect to the Issues DB
+
     db = db_connect('issues')
     new_comment = {}
+
+    # Find the issue in the DB that we're about to update and store a copy of it in 'document'
+    # After this, we delete it from the DB and then strip of the MongoDB _id identifier as we don't need this
 
     document = db.find_one({"id": int(issue_id)})
     db.delete_one({'_id': document['_id']})
     document.pop('_id')
+
+    # Update all of the fields of the issue from the submitted form data
 
     document['title'] = form.title.data
     document['description'] = form.desc.data
     document['severity'] = form.sev.data
     document['impact_doc'] = form.impact_doc.data
     document['impact_area'] = form.area.data
-    document['state'] = form.state.data
+    # Insert check to make sure the person that submitted the data was actually an admin/editor role, i.e. the data was just posted/injected!
+
+    # Need to insert a check to avoid status being set to 'None' because of the field not being present in the form.
+    if current_user.has_role('admin') or current_user.has_role('editor'):
+        document['state'] = form.state.data
+    if form.state.data == 'resolved':
+        document['resolution_state'] = form.res_state.data
+        document['resolution'] = form.resolution.data
+        # Tag who resolved/closed the issue?
+        if form.res_state.data == 'accept' or form.res_state.data == 'accept_w_mods' or form.res_state.data == 'roadmap':
+            document['resolved_in'] = form.resolved_in.data
+            document['resolved_by'] = current_user.email
+
     document['impact_ver'] = form.impact_ver.data
     document['prop_resolution'] = form.prop_res.data
+    document['allocated_to'] = form.allocated_to.data
 
     document['last_update'] = datetime.datetime.utcnow()
-    document['last_update_by'] = current_user.get_id()
+    document['last_update_by'] = current_user.email
 
-    comments = document['comments']
+    document['resolution_state'] = form.res_state.data
+    document['resolution'] = form.resolution.data
+    document['resolved_in'] = form.resolved_in.data
 
-    #print (comments)
+    # Grab a copy of the current comments associated with the issue. After first checking if there
+    # are comments already in the document
+
+    if 'comments' in document.keys():
+        comments = document['comments']
 
     if form.comment.data != '':
         new_comment['comment'] = form.comment.data
-        new_comment['user_id'] = current_user.get_id()
+        new_comment['user_id'] = current_user.email
         new_comment['date'] = datetime.datetime.utcnow()
         comments.append(new_comment)
 
-    print(document)
     document['comments'] = comments
-    print (document)
+
     db.insert_one(document)
 
     #db.update_one({'_id': document['_id']},
@@ -352,18 +385,96 @@ def update():
 
     return render_template("issueadded.html")
     # Todo Need to grab the comment field and add this in to the DB tagged with the current userID
-
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    form = LoginForm()
-    return render_template("login.html", form = form)
+    # Todo Better response to the edited issue page
 
 @app.route("/roadmap")
 @login_required
 def roadmap():
-    return "Roadmap"
+
+    """ Need to iterate over the DB and find all issues in a resolved state
+        and then go through each one and allocate them to the view accordingly. AN alternative could be that when
+        an issue is resolved, it gets copied to a new collection in the DB which then saves a load of
+        querying. """
+
+    issue_db = db_connect('issues')
+
+    resolved_issues = []
+
+    for issue in issue_db.find():
+        if issue['state'] == 'resolved' and issue['state'] != 'no_change':
+            resolved_issues.append(issue)
+
+    # Now we have a list of resolved issues
+
+    print (resolved_issues)
+
+    #for item in resolved_issues:
+
+    return render_template('roadmap.html', issues = resolved_issues)
+
+@app.route("/admin")
+@login_required
+@admin_permission.require()
+def admin():
+
+    user_db = db_connect('user')
+
+    users = []
+
+    for user in user_db.find():
+        users.append(user_datastore.get_user(user['email']))
+    print (users)
+    for entry in users:
+        print (entry.email)
+        print (entry.list_roles())
+    return render_template("admin.html", users=users)
+
+@app.route("/upload", methods=['POST'])
+@login_required
+def upload_issues():
+
+    upload = []
+
+    issue_db = db_connect('issues')
+
+    severity = {'1' : 'Low', '2' : 'Medium', '3' : 'High'}
+
+    if request.method == 'GET':
+        return render_template('upload.html')
+    elif request.method == 'POST' and 'file' in request.files:
+        file = request.files['file']
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+
+        csv_input = csv.reader(stream)
+
+        for row in csv_input:
+            entry = {}
+
+            if row[0] != '' and row[4] != 'Severity':
+                entry['title'] = row[0]
+                entry['impact_area'] = row[1]
+                entry['description'] = row[2]
+                entry['prop_resolution'] = row[3]
+                entry['severity'] = severity[row[4]]
+                entry['date'] = datetime.datetime.utcnow()
+                entry['allocated_to'] = ''
+                entry['state'] = 'open'
+                entry['id'] = issue_db.count()
+                entry['comments'] = []
+                entry['raised_by'] = 'marjacks@cisco.com'
+
+                entry['impact_doc'] = row[5]
+                entry['impact_ver'] = row[6]
+
+                issue_db.insert_one(entry)
+
+        #print (upload[1])
+
+        return "Uploaded"
 
 if __name__ == '__main__':
     app.run(port=5000, host='localhost')
+
+
+
+

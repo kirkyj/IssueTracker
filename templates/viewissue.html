@@ -54,9 +54,7 @@ Issue Tracker
 								<li>
 									<a href="myissues">My Issues</a>
 								</li>
-								<li>
-									<a href="#">One more separated link</a>
-								</li>
+
 							</ul>
 						</li>
                         <li><a href="newissue">New Issue</a></li>
@@ -69,6 +67,7 @@ Issue Tracker
                                 <li><a href="#"><span class="glyphicon glyphicon-user"></span> My Account</a></li>
                                 <li class="divider">
 								</li>
+                                {% if current_user.has_role('admin') %} <li><a href="/admin"><span class="glyphicon glyphicon-wrench"></span> Administration</a></li> {% endif %}
                                 <li><a href="/logout"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
                             </ul>
                         </li>
@@ -94,37 +93,42 @@ Issue Tracker
         <div class="row">
             <!--<div class="col-md-2"></div>-->
             <div class="col-md-1"></div>
-            <div class="form-group col-md-5">
-                {{ form.title.label }} {{ form.title(class="edit-class form-control", readonly=true) }}
+            <div class="form-group col-md-4">
+                {{ form.title.label }} {{ form.title(class="edit-class form-control", disabled=true) }}
             </div>
-            <div class="form-group col-md-5">
-                {{ form.raised_by.label }} {{ form.raised_by(class="form-control", readonly=true) }}
+            <div class="form-group col-md-3">
+                {{ form.raised_by.label }} {{ form.raised_by(class="form-control", disabled=true) }}
+            </div>
+            <div class="form-group col-md-3">
+                {{ form.allocated_to.label }} {{ form.allocated_to(class="edit-class form-control", disabled=true) }}
             </div>
             <div class="col-md-1"></div>
         </div>
         <div class="row">
             <div class="col-md-1"></div>
             <div class="form-group col-md-10">
-                {{ form.desc.label }} {{ form.desc(class="edit-class form-control", readonly=true) }}
+                {{ form.desc.label }} {{ form.desc(class="edit-class form-control", disabled=true) }}
             </div>
             <div class="col-md-1"></div>
         </div>
         <div class="row">
             <div class="col-md-1"></div>
             <div class="form-group col-md-2">
-                {{ form.sev.label }} {{ form.sev(class="edit-class form-control", readonly=true) }}
+                {{ form.sev.label }} {{ form.sev(class="edit-class form-control", disabled=true) }}
+            </div>
+            {% if current_user.has_role('admin') or current_user.has_role('editor') %}
+            <div class="form-group col-md-2">
+                {{ form.state.label }} {{ form.state(class="edit-class form-control", disabled=true) }}
+            </div>
+            {% endif %}
+            <div class="form-group col-md-2">
+                {{ form.impact_doc.label }} {{ form.impact_doc(class="edit-class form-control", disabled=true) }}
             </div>
             <div class="form-group col-md-2">
-                {{ form.state.label }} {{ form.state(class="edit-class form-control", readonly=true) }}
+                {{ form.impact_ver.label }} {{ form.impact_ver(class="edit-class form-control", disabled=true) }}
             </div>
             <div class="form-group col-md-2">
-                {{ form.impact_doc.label }} {{ form.impact_doc(class="edit-class form-control", readonly=true) }}
-            </div>
-            <div class="form-group col-md-2">
-                {{ form.impact_ver.label }} {{ form.impact_ver(class="edit-class form-control", readonly=true) }}
-            </div>
-            <div class="form-group col-md-2">
-                {{ form.area.label }} {{ form.area(class="edit-class form-control", readonly=true) }}
+                {{ form.area.label }} {{ form.area(class="edit-class form-control", disabled=true) }}
             </div>
             <div class="col-md-1"></div>
         </div>
@@ -132,17 +136,20 @@ Issue Tracker
         <div class="row">
             <div class="col-md-1"></div>
             <div class="form-group col-md-10">
-                {{ form.prop_res.label }} {{ form.prop_res(class="edit-class form-control", readonly=true) }}
+                {{ form.prop_res.label }} {{ form.prop_res(class="edit-class form-control", disabled=true) }}
             </div>
         </div>
 
-        <div class="row hidden" id="resolution">
+        <div class="row {% if 'open' in form.state.data %} hidden {% endif %}" id="resolution">
             <div class="col-md-1"></div>
             <div class="form-group col-md-2">
-                {{ form.res_state.label }} {{ form.res_state(class="form-control res-state") }}
+                {{ form.res_state.label }} {{ form.res_state(class="res-edit-class form-control res_state", disabled=true) }}
             </div>
-            <div class="form-group col-md-8">
-                {{ form.resolution.label }} {{ form.resolution(class="form-control") }}
+            <div class="form-group col-md-2 {% if 'no_change' in form.res_state.data %} hidden {% endif %}" id="resolved_in">
+                {{ form.resolved_in.label }} {{ form.resolved_in(class="res-edit-class form-control resolved_in", disabled=true) }}
+            </div>
+            <div class="form-group col-md-6">
+                {{ form.resolution.label }} {{ form.resolution(class="res-edit-class form-control", disabled=true) }}
             </div>
         </div>
 
@@ -167,7 +174,7 @@ Issue Tracker
                                 <div class="row">
                                     <div class="col-md-1"></div>
                                     <div class="form-group col-md-10">
-                                        <label for="old-comment-box">Comment from {{ comment ['user_id'] }} on {{ comment['date'] }}</label> <textarea class="form-control" id="old-comment-box" name="old-comment-box" readonly>{{ comment['comment'] }}</textarea>
+                                        <label for="old-comment-box">Comment from {{ comment ['user_id'] }} on {{ comment['date'] }}</label> <textarea class="form-control" id="old-comment-box" name="old-comment-box" disabled>{{ comment['comment'] }}</textarea>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -191,7 +198,9 @@ Issue Tracker
                 <button id="update" type="submit" class="btn btn-primary hidden" name="update">Save</button>
 
 
-                <button id="edit" type="button" class="btn btn-success" name="edit">Edit</button>
+                {% if current_user.email in form.raised_by.data or current_user.has_role('admin') or current_user.has_role('editor') %}
+                    <button id="edit" type="button" class="btn btn-success" name="edit">Edit</button>
+                {% endif %}
                 <button id="cancel" type="button" class="btn btn-danger hidden" name="cancel">Cancel</button>
                 <button id="commentbtn" type="button" class="btn btn-primary" name="comment">Add Comment</button>
             </div>
@@ -204,7 +213,14 @@ Issue Tracker
         {
             $("#edit").click(function()
                 {
-                    $(".edit-class").prop("readonly", false);
+                    $(".edit-class").prop("disabled", false);
+
+                    // Only allow an editor or admin to edit the resolution state of the issue
+
+                    {% if current_user.has_role('admin') or current_user.has_role('editor') %}
+                        $(".res-edit-class").prop("disabled", false);
+                    {% endif %}
+
                     $("#update").removeClass("hidden");
                     $("#cancel").removeClass("hidden");
 
@@ -214,7 +230,8 @@ Issue Tracker
 
             $("#cancel").click(function()
                 {
-                    $(".edit-class").prop("readonly", true);
+                    $(".edit-class").prop("disabled", true);
+                    $(".res-edit-class").prop("disabled", true);
                     $("#comment-box").addClass("hidden");
                     $("#update").addClass("hidden");
                     $("#cancel").addClass("hidden");
@@ -243,6 +260,23 @@ Issue Tracker
                 {
                     $("#resolution").addClass("hidden");
                 }
+            });
+
+            $("#res_state").change(function()
+            {
+                if ($(this).val() == "accept" || $(this).val() == "accept_w_mods")
+                {
+                    $("#resolved_in").removeClass("hidden");
+                }
+                else
+                {
+                    $("#resolved_in").addClass("hidden");
+                }
+            });
+            jQuery(function ($) {
+                $('form').bind('submit', function () {
+                    $(this).find(':input').prop('disabled', false);
+                });
             });
         });
 

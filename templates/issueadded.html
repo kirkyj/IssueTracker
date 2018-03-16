@@ -38,16 +38,14 @@ Issue Tracker
 									<a href="openissues">Open Issues</a>
 								</li>
 								<li>
-									<a href="#">Resolved Issues</a>
+									<a href="resissues">Resolved Issues</a>
 								</li>
 								<li class="divider">
 								</li>
 								<li>
 									<a href="myissues">My Issues</a>
 								</li>
-								<li>
-									<a href="#">One more separated link</a>
-								</li>
+
 							</ul>
 						</li>
                         <li><a href="newissue">New Issue</a></li>
@@ -60,6 +58,7 @@ Issue Tracker
                                 <li><a href="#"><span class="glyphicon glyphicon-user"></span> My Account</a></li>
                                 <li class="divider">
 								</li>
+                                {% if current_user.has_role('admin') %} <li><a href="/admin"><span class="glyphicon glyphicon-wrench"></span> Administration</a></li> {% endif %}
                                 <li><a href="/logout"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
                             </ul>
                         </li>

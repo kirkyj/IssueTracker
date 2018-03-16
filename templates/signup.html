@@ -47,7 +47,22 @@ Issue Tracker
             <form method="POST" action="/signup">
                 {{ wtf.quick_form(form, button_map={"submit":"primary"}) }}
             </form>
+
         </div>
     </div>
 </div>
+
+<script>
+
+    $(document).ready(function()
+        {
+            $("#submit").click(function()
+            {
+                alert("Thank-you for signing up. Your account will be disabled until the site administrator activates it.");
+            });
+        });
+
+
+</script>
+
 {% endblock %}
