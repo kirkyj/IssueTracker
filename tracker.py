@@ -96,8 +96,7 @@ def login_context():
 def user_reg(sender, user, confirm_token):
     # Automatically add the member role to all users during registration
     user_datastore.add_role_to_user(user, member_role)
-    # Should also de-activate all users until manual activation?
-
+    # Should also de-activate all users until manual activation?   
 
 @app.route("/")
 @login_required

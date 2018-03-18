@@ -1,0 +1,74 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+Issue Tracker
+{% endblock %}
+
+{% block content %}
+
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+</head>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-12">
+
+			<nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="#">Network iTC Tracker</a>
+                    </div>
+
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="/signup"><span class="glyphicon glyphicon-user"></span> Sign Up</a></li>
+                        <li><a href="/login"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+	</div>
+
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8">
+            <h1>Sign-up</h1>
+            <form method="POST" action="{{ url_for_security('register') }}">
+                {{ register_user_form.hidden_tag() }}
+                <div class="form-group">{{ register_user_form.firstname.label(class="control-label") }} {{ register_user_form.firstname(class="form-control") }}</div>
+                <div class="form-group">{{ register_user_form.lastname.label(class="control-label") }} {{ register_user_form.lastname(class="form-control") }}</div>
+                <div class="form-group">{{ register_user_form.email.label(class="control-label") }} {{ register_user_form.email(class="form-control") }}</div>
+                <div class="form-group">{{ register_user_form.password.label(class="control-label") }} {{ register_user_form.password(class="form-control") }}</div>
+                <div class="form-group">{{ register_user_form.org.label(class="control-label") }} {{ register_user_form.org(class="form-control") }}</div>
+                <div class="form-group">{{ register_user_form.submit(class="btn btn-primary") }}</div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+
+    $(document).ready(function()
+        {
+            $("#submit").click(function()
+            {
+                alert("Thank-you for signing up. Your account will be disabled until the site administrator activates it.");
+            });
+        });
+
+
+</script>
+
+{% endblock %}
