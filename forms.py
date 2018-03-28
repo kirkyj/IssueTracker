@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField, BooleanField
+from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField, BooleanField, RadioField
 from wtforms.validators import Email, DataRequired, EqualTo
 from flask_security import RegisterForm, ConfirmRegisterForm
 
@@ -53,7 +53,7 @@ class EditIssueForm(FlaskForm):
     raised_by = StringField('Submitted by')
     # ToDo Use a dynamic selection field for allocated_to based on the users in the user_DB
     allocated_to = SelectField('Allocated to')
-    impact_ver = SelectField('Impacted Version', choices = [('1.0','v1.0'),('2.0','v2.0'),('2.1','v2.1')], validators=[DataRequired()])
+    impact_ver = SelectField('Impacted Version', choices = [('1.0','v1.0'),('2.0','v2.0'),('2.07','v2.07'),('2.1','v2.1')], validators=[DataRequired()])
     # ToDo do I also need an additional field to identify who resolved the issue as well as how it was resolved (accepted etc.)
     # ToDo may also need an 'owner' field to identify who is handling the issue. As well as a resolution field
     res_state = SelectField('Resolution State', choices=[('no_change', 'No Change'), ('accept', 'Accept'), ('accept_w_mods', 'Accept with Modification'), ('roadmap','Roadmap')])
@@ -74,4 +74,15 @@ class NewReleaseForm(FlaskForm):
     kind = SelectField('Kind', choices=[('cPP','cPP'), ('SD','SD')])
     release = SelectField('Release Type', choices=[('major','Major'), ('minor','Minor')])
     submit = SubmitField('Create')
+
+class EditUserForm(FlaskForm):
+    firstname = StringField('First Name', validators=[DataRequired()])
+    lastname = StringField('Last Name', validators=[DataRequired()])
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    org = StringField('Organisation')
+    active = BooleanField('Active')
+    m_role = BooleanField('Member')
+    e_role = BooleanField('Editor')
+    a_role = BooleanField('Admin')
+    submit = SubmitField('Update')
 

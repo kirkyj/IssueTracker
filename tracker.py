@@ -1,14 +1,15 @@
-from flask import Flask, render_template, request, session, Response, current_app, flash, url_for
+from flask import Flask, flash, render_template, request, session, Response, current_app, flash, url_for, redirect
 from pymongo import MongoClient
 from flask_mongoengine import MongoEngine
 from flask_security import MongoEngineUserDatastore, Security, url_for_security, user_registered, UserMixin, RoleMixin, login_required, current_user
-from forms import SignupForm, NewIssueForm, EditIssueForm
+from forms import SignupForm, NewIssueForm, EditIssueForm, EditUserForm
 from flask_bootstrap import Bootstrap
 import datetime
 from flask_principal import RoleNeed, Permission
 import io
 import csv
 from flask_mail import Mail
+import json
 
 
 # Flask Setup
@@ -96,7 +97,7 @@ def login_context():
 def user_reg(sender, user, confirm_token):
     # Automatically add the member role to all users during registration
     user_datastore.add_role_to_user(user, member_role)
-    # Should also de-activate all users until manual activation?   
+    # Should also de-activate all users until manual activation?
 
 @app.route("/")
 @login_required
@@ -208,10 +209,20 @@ def new_issue():
 
         return render_template("issueadded.html")
 
+@app.route("/newenhancement", methods=['GET','POST'])
+@login_required
+def new_enhancement():
+
+    if request.method == 'GET':
+        return "New Enhancement Form"
+    elif request.method == 'POST':
+        return "New Enhancement Submitted"
 
 @app.route("/newrelease", methods=['GET','POST'])
 @login_required
 def new_release():
+
+    # TODO this should be added as a section on the Admin page.
 
     form = NewReleaseForm()
 
@@ -235,6 +246,7 @@ def new_release():
 def view_issue():
 
     issue_id = request.args.get("id")
+    message = request.args.get("message")
     collection = 'issues'
     user_db = db_connect('user')
     users = []
@@ -287,9 +299,9 @@ def view_issue():
         comments = document['comments']
         for comment in comments:
             comment['date'] = comment['date'].strftime("%a, %d. %b %Y %I:%M%p")
-        return render_template("viewissue.html", issue=document, form=form, id=issue_id, comments=comments)
+        return render_template("viewissue.html", issue=document, form=form, id=int(issue_id), comments=comments)
     except:
-        return render_template("viewissue.html", issue=document, form=form, id=issue_id)
+        return render_template("viewissue.html", issue=document, form=form, id=int(issue_id))
 
     # Now we have a handle to the issue we're interested in
     # just need to pass this back via the render engine
@@ -381,8 +393,9 @@ def update():
      #   db.update_one({'_id': document['_id']},
      #                 {"$set": {"comments.})
 
-
-    return render_template("issueadded.html")
+    flash('Issue was succesfully updated')
+    return redirect(url_for('.view_issue', id=issue_id))
+    #return render_template("issueadded.html")
     # Todo Need to grab the comment field and add this in to the DB tagged with the current userID
     # Todo Better response to the edited issue page
 
@@ -427,6 +440,35 @@ def admin():
         print (entry.email)
         print (entry.list_roles())
     return render_template("admin.html", users=users)
+
+@app.route("/viewuser")
+@login_required
+@admin_permission.require()
+def view_user():
+
+    user_db = db_connect('user')
+
+    form = EditUserForm
+
+    user_email = request.args.get("email")
+
+    for user in user_db.find():
+        if user_email in user['email']:
+            #print (user)
+            form.firstname = user['firstname']
+            form.lastname = user['lastname']
+            form.org = user['org']
+            form.active = user['active']
+            db_user = user_datastore.get_user(user['email'])
+            print (db_user.list_roles())
+            if 'editor' in db_user.list_roles():
+                print ('editor')
+            if 'admin' in db_user.list_roles():
+                print ('admin')
+            if 'member' in db_user.list_roles():
+                print ('member')
+    #return render_template('edituser.html', form=form)
+    return "No role"
 
 @app.route("/upload", methods=['POST'])
 @login_required

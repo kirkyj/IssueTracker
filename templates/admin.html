@@ -43,6 +43,7 @@
 							</ul>
 						</li>
                         <li><a href="newissue">New Issue</a></li>
+                        <li><a href="newenhancement">New Enhancement</a></li>
                         <li><a href="roadmap">Roadmap</a></li>
 
                     </ul>
@@ -91,7 +92,7 @@
                         <td>
                             {{ entry.firstname + " " + entry.lastname }}
                         </td>
-                        <td>{{ entry.email }}</td>
+                        <td><a href="viewuser?email={{ entry.email }}">{{ entry.email }}</a></td>
                         <td>{{ entry.org }}</td>
                         <td>{% if entry.has_role('admin') %} True {% else %} False {% endif %}</td>
                         <td>{% if entry.has_role('editor') %} True {% else %} False {% endif %}</td>

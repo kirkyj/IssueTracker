@@ -58,6 +58,7 @@ Issue Tracker
 							</ul>
 						</li>
                         <li><a href="newissue">New Issue</a></li>
+                        <li><a href="newenhancement">New Enhancement</a></li>
                         <li><a href="roadmap">Roadmap</a></li>
                     </ul>
                     <ul class="nav navbar-nav navbar-right">
@@ -87,6 +88,20 @@ Issue Tracker
         <div class="col-md-2"></div>
     </div>
 
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+
+    <div class="row">
+        <div class="col-md-1"></div>
+        <div class="col-md-8">
+             {% for message in messages %}
+                 <h4>{{ message }}</h4>
+            {% endfor %}
+        </div>
+        <div class="col-md-2"></div>
+    </div>
+        {% endif %}
+    {% endwith %}
     <!-- Row 3 -->
 
     <form method="POST" action="/updateissue?id={{ id }}">
@@ -194,7 +209,7 @@ Issue Tracker
         </div>
         <div class="row">
             <div class="col-md-1"></div>
-            <div class="form-group col-md-4">
+            <div class="form-group col-md-10">
                 <button id="update" type="submit" class="btn btn-primary hidden" name="update">Save</button>
 
 
@@ -203,6 +218,12 @@ Issue Tracker
                 {% endif %}
                 <button id="cancel" type="button" class="btn btn-danger hidden" name="cancel">Cancel</button>
                 <button id="commentbtn" type="button" class="btn btn-primary" name="comment">Add Comment</button>
+
+
+                <a class="pull-right btn btn-primary" href="viewissue?id={{ id+1 }}">Next</a>
+                <a class="pull-right btn btn-primary" href="viewissue?id={% if (id > 0) %} {{ id-1 }} {% elif (id < 1) %} {{ id }} {% endif %}">Previous</a>
+
+
             </div>
         </div>
     </form>
