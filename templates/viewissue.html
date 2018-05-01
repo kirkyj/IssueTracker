@@ -155,7 +155,7 @@ Issue Tracker
             </div>
         </div>
 
-        <div class="row {% if 'open' in form.state.data %} hidden {% endif %}" id="resolution">
+        <div class="row {% if 'open' in form.state.data or 'assigned' in form.state.data %} hidden {% endif %}" id="resolution">
             <div class="col-md-1"></div>
             <div class="form-group col-md-2">
                 {{ form.res_state.label }} {{ form.res_state(class="res-edit-class form-control res_state", disabled=true) }}
@@ -280,6 +280,18 @@ Issue Tracker
                 else
                 {
                     $("#resolution").addClass("hidden");
+                }
+            });
+
+            $("#allocated_to").change(function()
+            {
+                if ($(this).val() != "")
+                {
+                    $("#state").val("assigned");
+                }
+                else if ($(this).val() == "")
+                {
+                    $("#state").val("open");
                 }
             });
 
