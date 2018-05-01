@@ -45,18 +45,18 @@ class EditIssueForm(FlaskForm):
     id = StringField('Issue ID')
     title = StringField('Title', validators=[DataRequired()])
     desc = TextAreaField('Description', validators=[DataRequired()])
-    sev = SelectField('Severity', choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')])
+    sev = SelectField('Severity', choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')])
     impact_doc = SelectField('Document Impacted', choices=[('networkcpp', 'Network cPP'), ('networksd', 'Network SD'),
                                                            ('firewallcpp', 'Firewall cPP'),
                                                            ('firewallsd', 'Firewall SD')])
-    state = SelectField('State', choices=[('open','Open'), ('resolved','Resolved')])
+    state = SelectField('State', choices=[('open','Open'), ('assigned','Assigned'), ('resolved','Resolved')])
     raised_by = StringField('Submitted by')
     # ToDo Use a dynamic selection field for allocated_to based on the users in the user_DB
     allocated_to = SelectField('Allocated to')
     impact_ver = SelectField('Impacted Version', choices = [('1.0','v1.0'),('2.0','v2.0'),('2.07','v2.07'),('2.1','v2.1')], validators=[DataRequired()])
     # ToDo do I also need an additional field to identify who resolved the issue as well as how it was resolved (accepted etc.)
     # ToDo may also need an 'owner' field to identify who is handling the issue. As well as a resolution field
-    res_state = SelectField('Resolution State', choices=[('no_change', 'No Change'), ('accept', 'Accept'), ('accept_w_mods', 'Accept with Modification'), ('roadmap','Roadmap')])
+    res_state = SelectField('Resolution State', choices=[('accept', 'Accept'), ('accept_w_mods', 'Accept with Modification'), ('roadmap','Roadmap'), ('no_change', 'No Change')])
     resolution = TextAreaField('Resolution', validators=[DataRequired()])
     resolved_in = SelectField('Resolved in Version', choices=[('2.1','v2.1'), ('2.2','v2.2'),('3.0','v3.0')])
     area = StringField('Paragraph, Section or Page', validators=[DataRequired()])
