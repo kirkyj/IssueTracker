@@ -1,11 +1,17 @@
-{% extends "bootstrap/base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
-
-{% block title %}
-Issue Tracker
-{% endblock %}
-
 {% block content %}
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/datatables/1.9.4/jquery.dataTables.min.js"></script>
+	<script type="text/javascript" src="https://cdn.datatables.net/v/bs/dt-1.10.16/datatables.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+	<link rel="stylesheet" href="https://cdn.datatables.net/select/1.2.4/css/select.dataTables.min.css">
+	<script src="https://cdn.datatables.net/1.10.16/js/dataTables.bootstrap.min.js"></script>
+	<script src="https://cdn.datatables.net/select/1.2.4/js/dataTables.select.min.js"></script>
+	<script src="https://cdn.datatables.net/plug-ins/1.10.16/dataRender/ellipsis.js"></script>
 
     <!DOCTYPE html>
 <html lang="en">
@@ -85,5 +91,79 @@ Issue Tracker
 
         </div>
     </div>
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8">
+            <h3>Recent Activity</h3>
+
+            <table class="datatable table table-hover table-condensed">
+                <thead>
+			        <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Issue ID</th>
+                        <th>Action</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in log %}
+                    <tr>
+                        <td>{{ event['date'] }}</td>
+                        <td>{{ event['user'] }}</td>
+                        <td>
+                            <a href="viewissue?id={{ event['id'] }}">{{ event['id'] }}</a>
+                        </td>
+                        <td>{% if 'stateChange' in event['type'] %}
+                            State changed from <b>{{ event['oldState'] }}</b> to <b>{{ event['newState'] }}</b>
+                            {% elif 'newIssue' in event['type'] %}
+                            New issue added {{ event['title'] }}
+                        {% endif %}
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+    </div>
 </div>
+
+<script type="text/javascript">
+
+		$(document).ready(function() {
+			$('.datatable').dataTable({
+				"sPaginationType": "full",
+				"order": [0,'dsc'],
+				"paging": false,
+				"searching": false,
+				"info": false,
+
+				columnDefs: [ {
+					orderable: false,
+					// className: 'select-checkbox',
+					targets: "_all",
+					render: $.fn.dataTable.render.ellipsis( 50 )
+				} ],
+				//select: {
+				//	style:	'os',
+				//	selector: 'td:first-child'
+				//}
+
+			});
+			$('.datatable').each(function(){
+				var datatable = $(this);
+				// SEARCH - Add the placeholder for Search and Turn this into in-line form control
+				var search_input = datatable.closest('.dataTables_wrapper').find('div[id$=_filter] input');
+				search_input.attr('placeholder', 'Search');
+				search_input.addClass('form-control input-sm');
+				// LENGTH - Inline-Form control
+				var length_sel = datatable.closest('.dataTables_wrapper').find('div[id$=_length] select');
+				length_sel.addClass('form-control input-sm');
+			});
+
+		});
+</script>
+
 {% endblock %}
