@@ -24,3 +24,4 @@ MAIL_USE_TLS = True
 MAIL_USERNAME = 'ccnditc@gmail.com'
 MAIL_PASSWORD = gmailpass
 MAIL_DEFAULT_SENDER = 'ccnditc@gmail.com'
+SECURITY_TOKEN_MAX_AGE = 60
