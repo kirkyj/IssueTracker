@@ -1,4 +1,4 @@
-from flask import Flask, flash, render_template, request, session, Response, current_app, flash, url_for, redirect
+from flask import Flask, flash, render_template, request, session, Response, current_app, flash, url_for, redirect, abort
 from pymongo import MongoClient
 from flask_mongoengine import MongoEngine
 from flask_security import MongoEngineUserDatastore, Security, url_for_security, user_registered, UserMixin, RoleMixin, login_required, current_user
@@ -10,12 +10,16 @@ import io
 import csv
 from flask_mail import Mail
 import json
-
+from flask_admin import Admin, BaseView
+from flask_admin.contrib.mongoengine import ModelView
+from flask_admin import helpers as admin_helpers
 
 # Flask Setup
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
+
+admin = Admin(app, name='tracker', template_mode='bootstrap3')
 
 # MongoEngine Setup
 
@@ -34,6 +38,9 @@ mail = Mail(app)
 class Role(db.Document, RoleMixin):
     name = db.StringField(max_length=80, unique=True)
     description = db.StringField(max_length=255)
+
+    def __unicode__(self):
+        return self.name
 
 class User(db.Document, UserMixin):
 
@@ -55,8 +62,6 @@ class User(db.Document, UserMixin):
     #def get_id(self):
     #    return str(self.email)
 
-    #Could Add some addition functions here to deal with listing the user roles etc.
-
 # Flask-Security Setup and Configuration
 
 user_datastore = MongoEngineUserDatastore(db, User, Role)
@@ -71,6 +76,45 @@ member_role = user_datastore.find_or_create_role('member')
 admin_permission = Permission(RoleNeed('admin'))
 editor_permission = Permission(RoleNeed('editor'))
 member_permission = Permission(RoleNeed('member'))
+
+# Flask-Admin Setup - TESTING
+
+class MyModelView(ModelView):
+    can_create = True
+    column_exclude_list = ('password', 'confirmed_at')
+
+    def is_accessible(self):
+        if not current_user.is_active or not current_user.is_authenticated:
+            return False
+
+        if current_user.has_role('admin'):
+            return True
+
+        return False
+
+    def _handle_view(self, name, **kwargs):
+        """
+        Override builtin _handle_view in order to redirect users when a view is not accessible.
+        """
+        if not self.is_accessible():
+            if current_user.is_authenticated:
+                # permission denied
+                abort(403)
+            else:
+                # login
+                return redirect(url_for('security.login', next=request.url))
+
+admin.add_view(MyModelView(User))
+admin.add_view(MyModelView(Role))
+
+"""@security.context_processor
+def security_context_processor():
+    return dict(
+        admin_base_template=admin.base_template,
+        admin_view=admin.index_view,
+        h=admin_helpers,
+        get_url=url_for
+    )"""
 
 # MongoDB Connection Function
 
@@ -99,13 +143,49 @@ def user_reg(sender, user, confirm_token):
     user_datastore.add_role_to_user(user, member_role)
     # Should also de-activate all users until manual activation?
 
+def addToSummary(event):
+
+    event_db = db_connect('events')
+
+    """Need to define a standard 'event' type - or maybe set of event types. 
+        Update - Update is for when an issue is updated and should include Event ID, who updated it, when it was updated
+        Addition - Addition event is for when a new issue is added to the DB"""
+
+    """event['type'] = 'newIssue'
+    event['user'] = issue['raised_by']
+    event['date'] = issue['date']
+    event['id'] = issue['id']
+    event['title'] = issue['title']"""
+
+    event_db.insert(event)
+
+
 @app.route("/")
 @login_required
 def show_home():
 
     # ToDo Better home page with some summary information included.
+    # Maybe include a couple of tables showing recently added issues (last 5)
+    # Include recently resolved issues (last 5)
+    # Include total open issues, total resolved
+    # Include a recent activity log -> Add activity trail to a new collection
+    event_db = db_connect('events')
+    activity_log = []
 
-   return render_template('home.html')
+    count = 0
+
+    """Go and grab the last x number of events from the DB and pass them 
+    to the render engine to be displayed on the summary page"""
+
+    #event_db.find().sort('date', 1)
+
+    for event in event_db.find().sort('date',-1):
+        activity_log.append(event)
+        count += 1
+        if count >= 5:
+            break
+
+    return render_template('home.html', log=activity_log)
 
 @app.route("/openissues")
 @login_required
@@ -176,6 +256,7 @@ def new_issue():
 
     form = NewIssueForm()
     issue = {}
+    event = {}
 
     # Todo Add in ability to tag an issue as a NIT issue with associated identifier
 
@@ -193,6 +274,7 @@ def new_issue():
         issue['impact_doc'] = form.impact_doc.data
         issue['impact_ver'] = form.impact_ver.data
         issue['impact_area'] = form.area.data
+        # Maybe need a better way of tracking the ID values
         issue['id'] = issue_db.count()
         issue['raised_by'] = current_user.email
         issue['allocated_to'] = ''
@@ -204,6 +286,14 @@ def new_issue():
         issue['comments'] = []
 
         issue_db.insert_one(issue)
+
+        event['type'] = 'newIssue'
+        event['user'] = issue['raised_by']
+        event['date'] = issue['date']
+        event['id'] = issue['id']
+        event['title'] = issue['title']
+
+        addToSummary(event)
 
         # Todo need to find a better response template
 
@@ -246,7 +336,6 @@ def new_release():
 def view_issue():
 
     issue_id = request.args.get("id")
-    message = request.args.get("message")
     collection = 'issues'
     user_db = db_connect('user')
     users = []
@@ -287,6 +376,7 @@ def view_issue():
     form.impact_ver.data = document['impact_ver']
     form.area.data = document['impact_area']
     form.prop_res.data = document['prop_resolution']
+
     # Add a fixed-in drop down if the role is editor or admin
 
     if document['state'] == 'resolved':
@@ -303,9 +393,6 @@ def view_issue():
     except:
         return render_template("viewissue.html", issue=document, form=form, id=int(issue_id))
 
-    # Now we have a handle to the issue we're interested in
-    # just need to pass this back via the render engine
-
 
 @app.route("/updateissue", methods=['GET','POST'])
 @login_required
@@ -319,6 +406,8 @@ def update():
 
     # Connect to the Issues DB
 
+    event = {}
+
     db = db_connect('issues')
     new_comment = {}
 
@@ -326,6 +415,21 @@ def update():
     # After this, we delete it from the DB and then strip of the MongoDB _id identifier as we don't need this
 
     document = db.find_one({"id": int(issue_id)})
+
+    # Todo Need to put in a check to see if the current issue is 'Open' and the update includes a change to the state e.g. assigned or resolved.
+    # Todo If so, then we need to grab this and handle this in the event log.
+
+
+    if document['state'] != form.state.data:
+        event['type'] = 'stateChange'
+        event['oldState'] = document['state']
+        event['newState'] = form.state.data
+        event['user'] = current_user.email
+        event['date'] = datetime.datetime.utcnow()
+        event['id'] = issue_id
+        # ToDo Need to trigger an e-mail notification to the issue submitter if the state has changed
+        addToSummary(event)
+
     db.delete_one({'_id': document['_id']})
     document.pop('_id')
 
@@ -376,12 +480,6 @@ def update():
 
     db.insert_one(document)
 
-    #db.update_one({'_id': document['_id']},
-     #             {"$set": {"title": form.title.data, "desc": form.desc.data, "sev": form.sev.data,
-     #                       "impact_doc": form.impact_doc.data, "state": form.state.data,
-      #                      "impact_ver": form.impact_ver.data, "impact_area": form.area.data,
-       #                     "prop_resolution": form.prop_res.data}})
-
     # Remove the old document from the DB
     # Copy all of the mutable data from the form in to an updated document.
     # Keep the id, date and raised_by the same (these can't be updated by the form so shouldn't be a problem
@@ -397,7 +495,7 @@ def update():
     return redirect(url_for('.view_issue', id=issue_id))
     #return render_template("issueadded.html")
     # Todo Need to grab the comment field and add this in to the DB tagged with the current userID
-    # Todo Better response to the edited issue page
+
 
 @app.route("/roadmap")
 @login_required
@@ -424,7 +522,7 @@ def roadmap():
 
     return render_template('roadmap.html', issues = resolved_issues)
 
-@app.route("/admin")
+"""@app.route("/admin")
 @login_required
 @admin_permission.require()
 def admin():
@@ -440,7 +538,7 @@ def admin():
         print (entry.email)
         print (entry.list_roles())
     return render_template("admin.html", users=users)
-
+"""
 @app.route("/viewuser")
 @login_required
 @admin_permission.require()
@@ -509,9 +607,9 @@ def upload_issues():
 
                 issue_db.insert_one(entry)
 
-        #print (upload[1])
-
+        # ToDo Improve respone - maybe send a flash message to the Admin page
         return "Uploaded"
+
 
 if __name__ == '__main__':
     app.run(port=5000, host='localhost')
