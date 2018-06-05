@@ -1,0 +1,26 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+Issue Tracker
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2"</div>
+        <div class="col-md-8">
+            {{ form.example.label }} {{ form.example(class="form-check-input") }}
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-2"</div>
+        <div class="col-md-8 form-check">
+            {{ form.boolean.label(class="form-check-label") }} {{ form.boolean(class="form-check-input") }}
+        </div>
+    </div>
+
+</div>
+
+
+{% endblock %}

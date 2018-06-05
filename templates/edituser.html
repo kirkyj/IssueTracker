@@ -1,0 +1,76 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+Issue Tracker
+{% endblock %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+</head>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-12">
+
+			<nav class="navbar navbar-inverse">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="/">Network iTC Tracker</a>
+                    </div>
+                    <ul class="nav navbar-nav">
+                        <li class="dropdown">
+							 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Issues<strong class="caret"></strong></a>
+							<ul class="dropdown-menu">
+								<li>
+									<a href="allissues">All Issues</a>
+								</li>
+								<li>
+									<a href="openissues">Open Issues</a>
+								</li>
+								<li>
+									<a href="resissues">Resolved Issues</a>
+								</li>
+								<li class="divider">
+								</li>
+								<li>
+									<a href="myissues">My Issues</a>
+								</li>
+
+							</ul>
+						</li>
+                        <li><a href="newissue">New Issue</a></li>
+                        <li><a href="newenhancement">New Enhancement</a></li>
+                        <li><a href="roadmap">Roadmap</a></li>
+
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ current_user.email }}<strong class="caret"></strong></a>
+							<ul class="dropdown-menu">
+                                <li><a href="#"><span class="glyphicon glyphicon-user"></span> My Account</a></li>
+                                <li class="divider">
+								</li>
+                                {% if current_user.has_role('admin') %} <li><a href="/admin"><span class="glyphicon glyphicon-wrench"></span> Administration</a></li> {% endif %}
+                                <li><a href="/logout"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+	</div>
+
+
+
+{% endblock %}
